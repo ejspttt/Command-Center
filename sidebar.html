@@ -1,21 +1,33 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <base target="_top">
+    <base target="_top" />
     <style>
-      body { font-family: monospace; padding: 10px; }
-      textarea { width: 100%; height: 80px; margin-bottom: 10px; }
-      button { width: 100%; padding: 8px; }
-      #response { 
-        margin-top: 15px; 
-        padding: 10px; 
-        border: 1px solid #ccc; 
-        background-color: #f0f0f0; 
-        min-height: 100px; 
+      body {
+        font-family: monospace;
+        padding: 10px;
+      }
+      textarea {
+        width: 100%;
+        height: 80px;
+        margin-bottom: 10px;
+      }
+      button {
+        width: 100%;
+        padding: 8px;
+      }
+      #response {
+        margin-top: 15px;
+        padding: 10px;
+        border: 1px solid #ccc;
+        background-color: #f0f0f0;
+        min-height: 100px;
         white-space: pre-wrap; /* Important for showing line breaks */
         word-wrap: break-word;
       }
-      #loader { display: none; }
+      #loader {
+        display: none;
+      }
     </style>
   </head>
   <body>
@@ -27,21 +39,22 @@
 
     <script>
       function runCommand() {
-        document.getElementById('loader').style.display = 'block';
-        document.getElementById('response').style.display = 'none';
-        
-        var command = document.getElementById('command-input').value;
-        
+        document.getElementById("loader").style.display = "block";
+        document.getElementById("response").style.display = "none";
+
+        var command = document.getElementById("command-input").value;
+
         google.script.run
-          .withSuccessHandler(function(result) {
-            document.getElementById('loader').style.display = 'none';
-            document.getElementById('response').style.display = 'block';
-            document.getElementById('response').textContent = result;
+          .withSuccessHandler(function (result) {
+            document.getElementById("loader").style.display = "none";
+            document.getElementById("response").style.display = "block";
+            document.getElementById("response").textContent = result;
           })
-          .withFailureHandler(function(error) {
-            document.getElementById('loader').style.display = 'none';
-            document.getElementById('response').style.display = 'block';
-            document.getElementById('response').textContent = 'ERROR: ' + error.message;
+          .withFailureHandler(function (error) {
+            document.getElementById("loader").style.display = "none";
+            document.getElementById("response").style.display = "block";
+            document.getElementById("response").textContent =
+              "ERROR: " + error.message;
           })
           .processCommand(command);
       }

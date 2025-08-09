@@ -10,8 +10,8 @@
 function getConfiguration() {
   const properties = PropertiesService.getScriptProperties();
   return {
-    course_id: properties.getProperty('course_id'),
-    gemini_api_key: properties.getProperty('gemini_api_key')
+    course_id: properties.getProperty("course_id"),
+    gemini_api_key: properties.getProperty("gemini_api_key"),
   };
 }
 
@@ -23,17 +23,26 @@ function onOpen() {
   const ui = SpreadsheetApp.getUi();
 
   // Create a single, unified menu for all tools.
-  ui.createMenu('Classroom Tools')
-    .addSubMenu(ui.createMenu('Command Center')
-      .addItem('1. Create Student Sheets & Update List', 'createSheetsFromClassroom')
-      .addItem('2. Setup Command Center & Populate Scores', 'createCommandCenter')
-      .addSeparator()
-      .addItem('Setup Rubric on This Sheet (Utility)', 'setupRubric')
-      .addSeparator()
-      .addItem('Select Active Course', 'selectAndSetCourseId'))
+  ui.createMenu("Classroom Tools")
+    .addSubMenu(
+      ui
+        .createMenu("Command Center")
+        .addItem(
+          "1. Create Student Sheets & Update List",
+          "createSheetsFromClassroom"
+        )
+        .addItem(
+          "2. Setup Command Center & Populate Scores",
+          "createCommandCenter"
+        )
+        .addSeparator()
+        .addItem("Setup Rubric on This Sheet (Utility)", "setupRubric")
+        .addSeparator()
+        .addItem("Select Active Course", "selectAndSetCourseId")
+    )
     .addSeparator()
     // The AI sidebar is now named "Commander Assistant" for direct one-click access.
-    .addItem('Commander Assistant', 'showAiCopilotSidebar')
+    .addItem("Commander Assistant", "showAiCopilotSidebar")
     .addToUi();
 }
 
@@ -43,13 +52,13 @@ function onOpen() {
  */
 function showAiCopilotSidebar() {
   // Pass 'true' to ensure the Gemini API key is also checked.
-  if (!checkConfiguration(true)) return; 
-  
-  const html = HtmlService.createHtmlOutputFromFile('Sidebar')
-      .setTitle('Commander Assistant'); // Also updated the sidebar title for consistency
+  if (!checkConfiguration(true)) return;
+
+  const html = HtmlService.createHtmlOutputFromFile("Sidebar").setTitle(
+    "Commander Assistant"
+  ); // Also updated the sidebar title for consistency
   SpreadsheetApp.getUi().showSidebar(html);
 }
-
 
 /**
  * Checks if the required configuration (course_id and optionally gemini_api_key) is set.
@@ -58,19 +67,27 @@ function showAiCopilotSidebar() {
  * @returns {boolean} True if the configuration is valid, false otherwise.
  */
 function checkConfiguration(checkGeminiKey = false) {
-    const config = getConfiguration();
-    const ui = SpreadsheetApp.getUi();
+  const config = getConfiguration();
+  const ui = SpreadsheetApp.getUi();
 
-    if (!config.course_id) {
-        ui.alert('Configuration Missing', 'No Course ID has been set. Please use "Command Center > Select Active Course" to set it.', ui.ButtonSet.OK);
-        return false;
-    }
+  if (!config.course_id) {
+    ui.alert(
+      "Configuration Missing",
+      'No Course ID has been set. Please use "Command Center > Select Active Course" to set it.',
+      ui.ButtonSet.OK
+    );
+    return false;
+  }
 
-    if (checkGeminiKey && !config.gemini_api_key) {
-        // Reverted the alert message to point to the Script Properties.
-        ui.alert('Configuration Missing', 'The Gemini API Key is not set. Please add it via Extensions > Apps Script > Project Settings > Script Properties.', ui.ButtonSet.OK);
-        return false;
-    }
-    
-    return true;
+  if (checkGeminiKey && !config.gemini_api_key) {
+    // Reverted the alert message to point to the Script Properties.
+    ui.alert(
+      "Configuration Missing",
+      "The Gemini API Key is not set. Please add it via Extensions > Apps Script > Project Settings > Script Properties.",
+      ui.ButtonSet.OK
+    );
+    return false;
+  }
+
+  return true;
 }

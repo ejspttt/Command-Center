@@ -3,7 +3,6 @@
 // This file contains all the logic for interpreting and executing natural language commands via the Gemini API.
 // =====================================================================================================================
 
-
 /**
  * The primary function called from the sidebar UI. It orchestrates the entire process.
  * @param {string} command The natural language command from the user.
@@ -16,19 +15,27 @@ function processCommand(command) {
   }
   try {
     const structuredData = getStructuredDataFromGemini(command);
-    Logger.log(`[DEBUG] Received structured data from Gemini: ${JSON.stringify(structuredData, null, 2)}`);
+    Logger.log(
+      `[DEBUG] Received structured data from Gemini: ${JSON.stringify(
+        structuredData,
+        null,
+        2
+      )}`
+    );
 
     // Handle multi-step commands (e.g., "create 3 assignments").
     if (structuredData && Array.isArray(structuredData.apiCalls)) {
-      Logger.log(`[DEBUG] Multi-step command detected with ${structuredData.apiCalls.length} steps.`);
+      Logger.log(
+        `[DEBUG] Multi-step command detected with ${structuredData.apiCalls.length} steps.`
+      );
       let results = [];
       for (const apiCall of structuredData.apiCalls) {
         const result = executeClassroomAction({ apiCall });
         results.push(result);
       }
-      return results.join('\n-------------------\n');
+      return results.join("\n-------------------\n");
     }
-    
+
     // Handle single-step commands.
     if (structuredData && structuredData.apiCall) {
       Logger.log(`[DEBUG] Single-step command detected.`);
@@ -37,9 +44,12 @@ function processCommand(command) {
 
     Logger.log("[DEBUG] Could not determine a valid action from the command.");
     return "[DEBUG] Gemini did not return a valid action. Please check the prompt or Gemini response.";
-
   } catch (e) {
-    Logger.log(`[DEBUG] CRITICAL ERROR in processCommand: ${e.toString()}\nStack: ${e.stack}`);
+    Logger.log(
+      `[DEBUG] CRITICAL ERROR in processCommand: ${e.toString()}\nStack: ${
+        e.stack
+      }`
+    );
     return `[DEBUG] An error occurred: ${e.message}`;
   }
 }
@@ -58,82 +68,111 @@ function executeClassroomAction(data) {
     // --- PRE-FLIGHT LOGIC ---
     if (pre_flight) {
       Logger.log(`[DEBUG] Pre-flight action detected. Finding item first.`);
-      const { resource: preFlightResource, method: preFlightMethod, params: preFlightParams, filter, select } = pre_flight;
-      
-      const preFlightResourceParts = preFlightResource.split('.');
+      const {
+        resource: preFlightResource,
+        method: preFlightMethod,
+        params: preFlightParams,
+        filter,
+        select,
+      } = pre_flight;
+
+      const preFlightResourceParts = preFlightResource.split(".");
       let preFlightApiObject = Classroom;
       for (const part of preFlightResourceParts) {
         preFlightApiObject = preFlightApiObject[part];
       }
-      
-      const listResult = preFlightApiObject[preFlightMethod](...preFlightParams);
-      const resultKey = Object.keys(listResult).find(key => Array.isArray(listResult[key]));
+
+      const listResult = preFlightApiObject[preFlightMethod](
+        ...preFlightParams
+      );
+      const resultKey = Object.keys(listResult).find((key) =>
+        Array.isArray(listResult[key])
+      );
       let items = resultKey ? listResult[resultKey] : [];
 
       if (!items || items.length === 0) {
-        return `[DEBUG] PRE-FLIGHT FAILED: Could not find any items in '${preFlightResource}' to perform the action on.`;
+        return `Could not find any items to perform the action on.`;
       }
-      
+
       if (filter) {
-        items = items.filter(item => 
-          item && item[filter.key] && typeof item[filter.key] === 'string' && 
-          item[filter.key].toLowerCase().includes(filter.value.toLowerCase())
+        items = items.filter(
+          (item) =>
+            item &&
+            item[filter.key] &&
+            typeof item[filter.key] === "string" &&
+            item[filter.key].toLowerCase().includes(filter.value.toLowerCase())
         );
       }
-      
-      if (items.length === 0) return `[DEBUG] PRE-FLIGHT FAILED: Could not find an item matching your criteria.`;
-      
-      const targetItem = items[0]; 
+
+      if (items.length === 0)
+        return `Could not find an item matching your criteria.`;
+
+      const targetItem = items[0];
       const selectedValue = targetItem[select];
-      
+
       params = [config.course_id, selectedValue];
-      Logger.log(`[DEBUG] Pre-flight successful. Found item ID: ${selectedValue}. New params: ${JSON.stringify(params)}`);
+      Logger.log(
+        `[DEBUG] Pre-flight successful. Found item ID: ${selectedValue}. New params: ${JSON.stringify(
+          params
+        )}`
+      );
     }
 
     // --- EXECUTION LOGIC ---
-    const resourceParts = resource.split('.');
+    const resourceParts = resource.split(".");
     let apiObject = Classroom;
     for (const part of resourceParts) {
       apiObject = apiObject[part];
     }
 
-    if (typeof apiObject[method] !== 'function') {
+    if (typeof apiObject[method] !== "function") {
       const errorMessage = `[VALIDATION FAILED] The AI returned an invalid method name: '${method}'. This is not a function on the '${resource}' resource.`;
       Logger.log(errorMessage);
       return errorMessage;
     }
 
     Logger.log(`[DEBUG] SKIPPING CONFIRMATION. Intended action: ${summary}`);
-    Logger.log(`[DEBUG] Executing: ${resource}.${method} with params: ${JSON.stringify(params)}`);
+    Logger.log(
+      `[DEBUG] Executing: ${resource}.${method} with params: ${JSON.stringify(
+        params
+      )}`
+    );
 
     let result;
-    if (method.toLowerCase().includes('create')) {
-        const resourceBody = params[1];
-        const courseIdParam = params[0];
-        result = apiObject[method](resourceBody, courseIdParam);
+    if (method.toLowerCase().includes("create")) {
+      const resourceBody = params[1];
+      const courseIdParam = params[0];
+      result = apiObject[method](resourceBody, courseIdParam);
     } else {
-        result = apiObject[method](...params);
+      result = apiObject[method](...params);
     }
 
-    Logger.log(`[DEBUG] API call successful. Result: ${JSON.stringify(result).substring(0, 500)}...`);
+    Logger.log(
+      `[DEBUG] API call successful. Result: ${JSON.stringify(result).substring(
+        0,
+        500
+      )}...`
+    );
 
-    if (method.toLowerCase().includes('list')) {
-      const resultKey = Object.keys(result).find(key => Array.isArray(result[key]));
+    if (method.toLowerCase().includes("list")) {
+      const resultKey = Object.keys(result).find((key) =>
+        Array.isArray(result[key])
+      );
       const items = resultKey ? result[resultKey] : [];
-      if (items.length === 0) return `[DEBUG] SUCCESS: No items found.`;
-      
-      const names = items.map(item => item.profile ? item.profile.name.fullName : item.title || 'Unknown Item');
-      return `[DEBUG] SUCCESS: Found ${items.length} items:\n- ${names.join('\n- ')}`;
+      if (items.length === 0) return `No items found.`;
+
+      const names = items.map((item) =>
+        item.profile ? item.profile.name.fullName : item.title || "Unknown Item"
+      );
+      return `Found ${items.length} items:\n- ${names.join("\n- ")}`;
     }
 
-    return `[DEBUG] SUCCESS: Action "${summary}" completed.`;
-
+    return `Success: ${summary}`;
   } catch (e) {
     Logger.log(`[DEBUG] API call FAILED: ${e.toString()}`);
-    return `[DEBUG] API call FAILED: ${e.message}`;
+    return `Error: ${e.message}`;
   }
 }
-
 
 // =====================================================================================================================
 // --- GEMINI API INTERACTION ---
@@ -146,8 +185,9 @@ function executeClassroomAction(data) {
  */
 function getStructuredDataFromGemini(prompt) {
   const config = getConfiguration();
-  const timezone = SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone();
-  const todayString = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD format
+  const timezone =
+    SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone();
+  const todayString = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD format
 
   const geminiApiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${config.gemini_api_key}`;
 
@@ -165,15 +205,17 @@ function getStructuredDataFromGemini(prompt) {
   Example: "delete assignment test" -> { "apiCall": { "resource": "Courses.CourseWork", "method": "remove", "params": [], "summary": "Delete assignment named 'test'.", "pre_flight": { "resource": "Courses.CourseWork", "method": "list", "params": ["${config.course_id}", {"courseWorkStates": ["DRAFT", "PUBLISHED"]}], "filter": {"key": "title", "value": "test"}, "select": "id" } } }`;
 
   const requestBody = {
-    "contents": [{ "parts": [{ "text": systemPrompt + "\n\nUser Command: " + prompt }] }],
-    "generationConfig": { "responseMimeType": "application/json" }
+    contents: [
+      { parts: [{ text: systemPrompt + "\n\nUser Command: " + prompt }] },
+    ],
+    generationConfig: { responseMimeType: "application/json" },
   };
 
   const options = {
-    'method': 'post',
-    'contentType': 'application/json',
-    'payload': JSON.stringify(requestBody),
-    'muteHttpExceptions': true
+    method: "post",
+    contentType: "application/json",
+    payload: JSON.stringify(requestBody),
+    muteHttpExceptions: true,
   };
 
   Logger.log(`[DEBUG] Sending to Gemini: ${JSON.stringify(requestBody)}`);
@@ -184,17 +226,21 @@ function getStructuredDataFromGemini(prompt) {
   Logger.log(`[DEBUG] Gemini Raw Response Body: ${responseBody}`);
 
   if (responseCode !== 200) {
-      throw new Error(`Gemini API returned error code ${responseCode}`);
+    throw new Error(`Gemini API returned error code ${responseCode}`);
   }
 
   try {
-      const parsedResponse = JSON.parse(responseBody);
-      let jsonText = parsedResponse.candidates[0].content.parts[0].text;
-      jsonText = jsonText.replace(/^```json\s*/, '').replace(/```$/, '');
-      return JSON.parse(jsonText);
-  } catch(e) {
-      Logger.log(`[DEBUG] Failed to parse JSON from Gemini response. Error: ${e.message}`);
-      throw new Error(`Could not parse JSON from Gemini's response. Raw response was:\n\n${responseBody}`);
+    const parsedResponse = JSON.parse(responseBody);
+    let jsonText = parsedResponse.candidates[0].content.parts[0].text;
+    jsonText = jsonText.replace(/^```json\s*/, "").replace(/```$/, "");
+    return JSON.parse(jsonText);
+  } catch (e) {
+    Logger.log(
+      `[DEBUG] Failed to parse JSON from Gemini response. Error: ${e.message}`
+    );
+    throw new Error(
+      `Could not parse JSON from Gemini's response. Raw response was:\n\n${responseBody}`
+    );
   }
 }
 
@@ -205,9 +251,9 @@ function getStructuredDataFromGemini(prompt) {
  */
 function forceScopes() {
   Classroom.Courses.list();
-  Classroom.Courses.Students.list('');
-  Classroom.Courses.CourseWork.list('');
-  Classroom.Courses.CourseWork.create({}, '');
-  Classroom.Courses.CourseWork.remove('', '');
-  Classroom.Courses.Announcements.create({}, '');
+  Classroom.Courses.Students.list("");
+  Classroom.Courses.CourseWork.list("");
+  Classroom.Courses.CourseWork.create({}, "");
+  Classroom.Courses.CourseWork.remove("", "");
+  Classroom.Courses.Announcements.create({}, "");
 }
